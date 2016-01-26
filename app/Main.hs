@@ -10,24 +10,25 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-   ("print": user: path: nodes) -> printHdfsFile (mkConfig user nodes) path
-   ("copyToLocal": destFile: user: path: nodes) -> copyHdfsFileToLocal destFile (mkConfig user nodes) path
-   _ -> error "usage: command [cmd-args] user path nodes\n commands:\n print\n copyToLocal destFile"
+   ("print": path: user: nodes) -> printHdfsFile (mkConfig user nodes) path
+   ("copyToLocal": destFile: path: user: nodes) -> copyHdfsFileToLocal destFile (mkConfig user nodes) path
+   _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n print\n copyToLocal destFile"
   where
-    mkConfig u ns = HadoopConfig (T.pack u) (map toEndpoint ns) Nothing
+    mkConfig _ [] = Nothing
+    mkConfig u ns = Just $ HadoopConfig (T.pack u) (map toEndpoint ns) Nothing
       where
         toEndpoint :: String -> Endpoint
         toEndpoint str = let es = splitOn ":" str in if length es == 2 then Endpoint (T.pack $ es !! 0) (read $ es !! 1) else error $ "illegal host: "++str
 
-printHdfsFile :: HadoopConfig -> String -> IO ()
+printHdfsFile :: Maybe HadoopConfig -> String -> IO ()
 printHdfsFile = withHdfsReader print
 
-copyHdfsFileToLocal :: FilePath -> HadoopConfig -> String -> IO ()
+copyHdfsFileToLocal :: FilePath -> Maybe HadoopConfig -> String -> IO ()
 copyHdfsFileToLocal destFile = withHdfsReader $ BC.writeFile destFile
 
-withHdfsReader :: (BC.ByteString -> IO ()) -> HadoopConfig -> String -> IO ()
+withHdfsReader :: (BC.ByteString -> IO ()) -> Maybe HadoopConfig -> String -> IO ()
 withHdfsReader action config path =  do
-  readHandle_ <- runHdfs' config $ openRead $ BC.pack path
+  readHandle_ <- maybe runHdfs runHdfs' config $ openRead $ BC.pack path
   case readHandle_ of
    (Just readHandle) -> hdfsMapM_ action readHandle
    Nothing -> error "no read handle"
