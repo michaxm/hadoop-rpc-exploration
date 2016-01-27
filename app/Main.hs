@@ -4,7 +4,9 @@ import Data.List.Split (splitOn)
 import qualified Data.Text as T
 import Network.Hadoop.Hdfs
 import Network.Hadoop.Read
+import System.Directory (doesFileExist)
 import System.Environment
+import System.IO (IOMode(..), withBinaryFile)
 
 main :: IO ()
 main = do
@@ -24,7 +26,11 @@ printHdfsFile :: Maybe HadoopConfig -> String -> IO ()
 printHdfsFile = withHdfsReader print
 
 copyHdfsFileToLocal :: FilePath -> Maybe HadoopConfig -> String -> IO ()
-copyHdfsFileToLocal destFile = withHdfsReader $ BC.writeFile destFile
+copyHdfsFileToLocal destFile config path = do
+  destFileExists <- doesFileExist destFile
+  if destFileExists
+    then error $ destFile++" exists"
+    else withBinaryFile destFile WriteMode $ \h -> withHdfsReader (BC.hPut h) config path
 
 withHdfsReader :: (BC.ByteString -> IO ()) -> Maybe HadoopConfig -> String -> IO ()
 withHdfsReader action config path =  do

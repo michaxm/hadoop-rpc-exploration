@@ -22,4 +22,5 @@ executable exploration
                      , bytestring
                      , text
                      , split
+                     , directory
   default-language:    Haskell2010
