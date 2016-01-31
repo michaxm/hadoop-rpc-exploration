@@ -12,8 +12,9 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-   ("print": path: user: nodes) -> printHdfsFile (mkConfig user nodes) path
-   ("copyToLocal": destFile: path: user: nodes) -> copyHdfsFileToLocal destFile (mkConfig user nodes) path
+   ("print": path: user: nodes) -> printFile (mkConfig user nodes) path
+   ("listLocations": path: user: nodes) -> listLocations (mkConfig user nodes) path
+   ("copyToLocal": destFile: path: user: nodes) -> copyToLocal destFile (mkConfig user nodes) path
    _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n print\n copyToLocal destFile"
   where
     mkConfig _ [] = Nothing
@@ -22,11 +23,16 @@ main = do
         toEndpoint :: String -> Endpoint
         toEndpoint str = let es = splitOn ":" str in if length es == 2 then Endpoint (T.pack $ es !! 0) (read $ es !! 1) else error $ "illegal host: "++str
 
-printHdfsFile :: Maybe HadoopConfig -> String -> IO ()
-printHdfsFile = withHdfsReader print
+printFile :: Maybe HadoopConfig -> String -> IO ()
+printFile = withHdfsReader print
 
-copyHdfsFileToLocal :: FilePath -> Maybe HadoopConfig -> String -> IO ()
-copyHdfsFileToLocal destFile config path = do
+listLocations :: Maybe HadoopConfig -> String -> IO ()
+listLocations config path = do
+  locs <- maybe runHdfs runHdfs' config $ getBlockLocations $ BC.pack path
+  print locs
+
+copyToLocal :: FilePath -> Maybe HadoopConfig -> String -> IO ()
+copyToLocal destFile config path = do
   destFileExists <- doesFileExist destFile
   if destFileExists
     then error $ destFile++" exists"
