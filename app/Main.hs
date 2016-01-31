@@ -12,10 +12,11 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-   ("print": path: user: nodes) -> printFile (mkConfig user nodes) path
+   ("ls": path: user: nodes) -> listFiles (mkConfig user nodes) path
    ("listLocations": path: user: nodes) -> listLocations (mkConfig user nodes) path
+   ("print": path: user: nodes) -> printFile (mkConfig user nodes) path
    ("copyToLocal": destFile: path: user: nodes) -> copyToLocal destFile (mkConfig user nodes) path
-   _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n print\n copyToLocal destFile"
+   _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n ls\nlistLocations\nprint\n copyToLocal destFile"
   where
     mkConfig _ [] = Nothing
     mkConfig u ns = Just $ HadoopConfig (T.pack u) (map toEndpoint ns) Nothing
@@ -23,13 +24,19 @@ main = do
         toEndpoint :: String -> Endpoint
         toEndpoint str = let es = splitOn ":" str in if length es == 2 then Endpoint (T.pack $ es !! 0) (read $ es !! 1) else error $ "illegal host: "++str
 
-printFile :: Maybe HadoopConfig -> String -> IO ()
-printFile = withHdfsReader print
+listFiles :: Maybe HadoopConfig -> String -> IO ()
+listFiles config path = do
+  files <- maybe runHdfs runHdfs' config $ getListing' $ BC.pack path
+  print files
 
 listLocations :: Maybe HadoopConfig -> String -> IO ()
 listLocations config path = do
   locs <- maybe runHdfs runHdfs' config $ getBlockLocations $ BC.pack path
   print locs
+
+
+printFile :: Maybe HadoopConfig -> String -> IO ()
+printFile = withHdfsReader print
 
 copyToLocal :: FilePath -> Maybe HadoopConfig -> String -> IO ()
 copyToLocal destFile config path = do
