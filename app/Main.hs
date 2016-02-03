@@ -16,7 +16,7 @@ main = do
    ("listLocations": path: user: nodes) -> listLocations (mkConfig user nodes) path
    ("print": path: user: nodes) -> printFile (mkConfig user nodes) path
    ("copyToLocal": destFile: path: user: nodes) -> copyToLocal destFile (mkConfig user nodes) path
-   _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n ls\nlistLocations\nprint\n copyToLocal destFile"
+   _ -> error "usage: command [cmd-args] path [user nodes]\n commands:\n ls\n listLocations\n print\n copyToLocal destFile"
   where
     mkConfig _ [] = Nothing
     mkConfig u ns = Just $ HadoopConfig (T.pack u) (map toEndpoint ns) Nothing
